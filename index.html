@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stylish Falling Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #2c3e50;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            height: 100vh;
+            max-height: 600px;
+            background-color: #34495e;
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
+            overflow: hidden;
+            border: 5px solid #2980b9;
+            background-image: linear-gradient(to bottom right, #34495e, #2c3e50);
+        }
+
+        .ball {
+            position: absolute;
+            width: 15vw;
+            height: 15vw;
+            max-width: 60px;
+            max-height: 60px;
+            background-color: #e74c3c;
+            border-radius: 50%;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+            transition: all 0.1s ease-out;
+        }
+
+        .obstacle {
+            position: absolute;
+            width: 15vw;
+            height: 15vw;
+            max-width: 60px;
+            max-height: 60px;
+            background-color: #3498db;
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.7);
+            animation: obstacleFall linear infinite;
+            animation-duration: 4s;
+        }
+
+        @keyframes obstacleFall {
+            0% { top: -60px; }
+            100% { top: 100vh; }
+        }
+
+        .score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 5vw;
+            max-size: 26px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+        }
+
+        button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            text-transform: uppercase;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(231, 76, 60, 0.8);
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #c0392b;
+            transform: scale(1.05);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .road {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(to bottom, #2c3e50 0px, #2c3e50 10px, #34495e 10px, #34495e 50px);
+            z-index: -1;
+            animation: move-road 1.5s linear infinite;
+        }
+
+        @keyframes move-road {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container" id="gameContainer">
+    <div class="road"></div>
+    <div class="ball" id="ball"></div>
+    <div class="score" id="score">Очки: 0</div>
+    <button onclick="startGame()">Старт</button>
+</div>
+
+<script>
+    const gameContainer = document.getElementById('gameContainer');
+    const ball = document.getElementById('ball');
+    const scoreDisplay = document.getElementById('score');
+    let score = 0;
+    let ballPositionX = gameContainer.offsetWidth / 2 - ball.offsetWidth / 2;
+    let isJumping = false;
+    let jumpHeight = 0;
+    let gameInterval, obstacleInterval;
+    let obstacles = [];
+
+    function startGame() {
+        score = 0;
+        scoreDisplay.textContent = `Очки: ${score}`;
+        ball.style.left = `${ballPositionX}px`;
+
+        obstacles.forEach(obstacle => gameContainer.removeChild(obstacle));
+        obstacles = [];
+
+        gameInterval = setInterval(updateGame, 100);
+        obstacleInterval = setInterval(createObstacle, 2000);
+        document.querySelector('button').disabled = true;
+    }
+
+    function createObstacle() {
+        const obstacle = document.createElement('div');
+        obstacle.classList.add('obstacle');
+        obstacle.style.left = `${Math.random() * (gameContainer.offsetWidth - ball.offsetWidth)}px`;
+        obstacle.style.top = `-60px`;
+
+        gameContainer.appendChild(obstacle);
+        obstacles.push(obstacle);
+    }
+
+    function updateGame() {
+        moveObstacles();
+        checkCollision();
+        score++;
+        scoreDisplay.textContent = `Очки: ${score}`;
+    }
+
+    function moveObstacles() {
+        obstacles.forEach((obstacle, index) => {
+            let obstacleTop = parseInt(obstacle.style.top);
+            obstacle.style.top = `${obstacleTop + 5}px`;
+
+            if (obstacleTop > gameContainer.offsetHeight) {
+                gameContainer.removeChild(obstacle);
+                obstacles.splice(index, 1);
+            }
+        });
+    }
+
+    function checkCollision() {
+        obstacles.forEach((obstacle) => {
+            const ballRect = ball.getBoundingClientRect();
+            const obstacleRect = obstacle.getBoundingClientRect();
+
+            if (
+                ballRect.left < obstacleRect.left + obstacleRect.width &&
+                ballRect.left + ballRect.width > obstacleRect.left &&
+                ballRect.top < obstacleRect.top + obstacleRect.height &&
+                ballRect.height + ballRect.top > obstacleRect.top
+            ) {
+                endGame();
+            }
+        });
+    }
+
+    function endGame() {
+        clearInterval(gameInterval);
+        clearInterval(obstacleInterval);
+        alert(`Гра завершена! Ваш рахунок: ${score}`);
+        obstacles.forEach(obstacle => gameContainer.removeChild(obstacle));
+        obstacles = [];
+        document.querySelector('button').disabled = false;
+    }
+
+    gameContainer.addEventListener('touchstart', handleTouchStart, false);
+    gameContainer.addEventListener('touchmove', handleTouchMove, false);
+    let xStart = null;
+
+    function handleTouchStart(evt) {
+        xStart = evt.touches[0].clientX;
+    }
+
+    function handleTouchMove(evt) {
+        if (!xStart) return;
+        let xDiff = xStart - evt.touches[0].clientX;
+
+        if (xDiff > 0 && ballPositionX > 0) {
+            ballPositionX -= 10;
+        } else if (xDiff < 0 && ballPositionX < (gameContainer.offsetWidth - ball.offsetWidth)) {
+            ballPositionX += 10;
+        }
+        ball.style.left = `${ballPositionX}px`;
+        xStart = null;
+    }
+</script>
+
+</body>
+</html>
